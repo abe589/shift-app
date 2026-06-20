@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}入力確認 - {{ staff }}{% endblock %}
+{% block header %}📋 入力確認{% endblock %}
+
+{% block content %}
+{% if staff %}
+<div class="card">
+    <div class="card-title">{{ staff }} さんのシフト</div>
+
+    <div class="month-selector">
+        <input type="month" id="month_input" value="{{ month }}">
+        <button onclick="changeMonth()">表示</button>
+    </div>
+
+    {% if shifts %}
+    {% for s in shifts %}
+    <div class="shift-item">
+        <div class="shift-date">{{ s.date }}</div>
+        <div class="shift-times">{{ s.start }} → {{ s.end }}</div>
+        <div class="shift-night">🌙 夜時間: {{ s.night }}</div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <p style="color:#999; font-size:14px; text-align:center; padding:20px;">この月のシフトはまだありません</p>
+    {% endif %}
+</div>
+{% endif %}
+
+<div class="nav-links">
+    <a href="/" class="primary">＋ シフトを追加</a>
+</div>
+
+<script>
+    function changeMonth() {
+        const m = document.getElementById('month_input').value;
+        if (!m) { alert('月を選んでください'); return; }
+        const staff = '{{ staff }}';
+        window.location.href = `/confirm?staff=${encodeURIComponent(staff)}&month=${m}`;
+    }
+</script>
+{% endblock %}

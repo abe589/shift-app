@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}シフト入力{% endblock %}
+{% block header %}📅 シフト入力{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-title">シフトを入力してください</div>
+    <form action="/submit" method="post" id="shiftForm">
+
+        <label for="staff_name">あなたの名前</label>
+        <select name="staff_name" id="staff_name" required>
+            <option value="">-- 選んでください --</option>
+            {% for name in staff_list %}
+            <option value="{{ name }}">{{ name }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="shift_date">勤務日</label>
+        <input type="date" name="shift_date" id="shift_date" required>
+
+        <div class="time-row">
+            <div>
+                <label for="start_time">開始時刻</label>
+                <input type="time" name="start_time" id="start_time" required>
+            </div>
+            <div>
+                <label for="end_time">終了時刻</label>
+                <input type="time" name="end_time" id="end_time" required>
+            </div>
+        </div>
+
+        <label class="overnight-toggle" for="is_overnight">
+            <input type="checkbox" name="is_overnight" id="is_overnight">
+            🌙 終了が翌日（深夜0時以降）の場合
+        </label>
+
+        <div id="overnight-hint" style="display:none; margin-top:8px; font-size:13px; color:#666; padding: 8px 12px; background:#f5f5f5; border-radius:6px;">
+            例: 深夜1時30分終了 → 「1:30」と入力
+        </div>
+
+        <button type="submit" class="btn btn-primary">✅ 送信する</button>
+    </form>
+</div>
+
+<div class="card">
+    <div class="card-title">入力確認</div>
+    <p style="font-size:14px; color:#666; margin-bottom:12px;">送信後に自分のシフトを確認できます</p>
+    <div>
+        <select id="confirm_staff" style="width:100%; padding:12px 14px; border:2px solid #ddd; border-radius:8px; font-size:16px; font-family:inherit;">
+            <option value="">名前を選んでください</option>
+            {% for name in staff_list %}
+            <option value="{{ name }}">{{ name }}</option>
+            {% endfor %}
+        </select>
+        <button onclick="goConfirm()" class="btn btn-secondary" style="margin-top:10px;">📋 確認する</button>
+    </div>
+</div>
+
+<script>
+    // 今日の日付をデフォルトに設定
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    document.getElementById('shift_date').value = `${yyyy}-${mm}-${dd}`;
+
+    // チェックボックスでヒント表示
+    document.getElementById('is_overnight').addEventListener('change', function() {
+        document.getElementById('overnight-hint').style.display = this.checked ? 'block' : 'none';
+    });
+
+    // フォーム送信前バリデーション
+    document.getElementById('shiftForm').addEventListener('submit', function(e) {
+        const start = document.getElementById('start_time').value;
+        const end = document.getElementById('end_time').value;
+        const overnight = document.getElementById('is_overnight').checked;
+
+        if (start && end && !overnight) {
+            const startMin = toMin(start);
+            const endMin = toMin(end);
+            if (endMin <= startMin) {
+                e.preventDefault();
+                alert('終了時刻は開始時刻より後にしてください\n翌日深夜に終わる場合は「翌日チェック」を入れてください');
+                return;
+            }
+        }
+    });
+
+    function toMin(t) {
+        const [h, m] = t.split(':').map(Number);
+        return h * 60 + m;
+    }
+
+    function goConfirm() {
+        const staff = document.getElementById('confirm_staff').value;
+        if (!staff) { alert('名前を選んでください'); return; }
+        window.location.href = `/confirm?staff=${encodeURIComponent(staff)}`;
+    }
+</script>
+{% endblock %}

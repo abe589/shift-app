@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}管理画面 - {{ month }}{% endblock %}
+{% block header %}⚙️ 管理画面{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-title">月選択 / Excelダウンロード</div>
+
+    <div class="month-selector">
+        <input type="month" id="month_input" value="{{ month }}">
+        <button onclick="changeMonth()">表示</button>
+    </div>
+
+    <a href="/admin/export?month={{ month }}"
+       style="display:block; text-decoration:none;">
+        <button class="btn btn-primary" style="margin-top:0; background:#2e7d32;">
+            📥 Excelダウンロード（{{ month }}）
+        </button>
+    </a>
+</div>
+
+{% if entries %}
+<div class="summary-box">
+    <strong>{{ month }}</strong> の入力件数：<strong>{{ entries | length }}</strong> 件
+    （スタッフ {{ entries | map(attribute='staff') | unique | list | length }} 名）
+</div>
+
+{% set ns = namespace(current_staff='') %}
+{% for e in entries %}
+{% if e.staff != ns.current_staff %}
+{% set ns.current_staff = e.staff %}
+<div class="card" style="margin-bottom:12px;">
+    <div class="card-title" style="margin-bottom:10px;">{{ e.staff }}</div>
+    <table>
+        <thead>
+            <tr>
+                <th>日付</th>
+                <th>開始</th>
+                <th>終了</th>
+                <th>夜時間</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+{% endif %}
+            <tr>
+                <td>{{ e.date[5:] }}</td>
+                <td>{{ e.start }}</td>
+                <td>{{ e.end }}</td>
+                <td>
+                    {% if e.night != '0:00' %}
+                    <span class="badge badge-night">{{ e.night }}</span>
+                    {% else %}
+                    <span class="badge badge-none">なし</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <form action="/admin/delete/{{ e.id }}" method="post" style="display:inline;"
+                          onsubmit="return confirm('{{ e.date }} の {{ e.staff }} のシフトを削除しますか？')">
+                        <input type="hidden" name="month" value="{{ month }}">
+                        <button type="submit"
+                                style="padding:4px 10px; background:#ff5252; color:white; border:none; border-radius:6px; font-size:12px; cursor:pointer;">
+                            削除
+                        </button>
+                    </form>
+                </td>
+            </tr>
+{% set next_staff = entries[loop.index].staff if loop.index < entries|length else '' %}
+{% if next_staff != ns.current_staff %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endfor %}
+
+{% else %}
+<div class="card">
+    <p style="color:#999; text-align:center; padding:30px; font-size:15px;">
+        {{ month }} のシフトはまだありません
+    </p>
+</div>
+{% endif %}
+
+<div class="nav-links">
+    <a href="/" class="secondary">← スタッフ入力画面</a>
+</div>
+
+<script>
+    function changeMonth() {
+        const m = document.getElementById('month_input').value;
+        if (!m) { alert('月を選んでください'); return; }
+        window.location.href = `/admin?month=${m}`;
+    }
+</script>
+{% endblock %}

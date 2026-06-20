@@ -3,6 +3,19 @@
 {% block header %}SHIFT入力{% endblock %}
 
 {% block content %}
+<style>
+    .time-picker {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        gap: 6px;
+    }
+    .time-picker select { padding: 13px 10px; text-align: center; }
+    .time-sep { font-size: 20px; font-weight: bold; color: #999; text-align: center; }
+    /* hidden input for form submission */
+    input[name="start_time"], input[name="end_time"] { display: none; }
+</style>
+
 <div class="card">
     <div class="card-title">シフトを入力</div>
     <form action="/submit" method="post" id="shiftForm">
@@ -18,14 +31,24 @@
         <label for="shift_date">勤務日</label>
         <input type="date" name="shift_date" id="shift_date" required>
 
-        <div class="time-row">
+        <div class="time-row" style="margin-top:16px;">
             <div>
-                <label for="start_time">開始時刻</label>
-                <input type="time" name="start_time" id="start_time" step="300" required>
+                <label>開始時刻</label>
+                <div class="time-picker">
+                    <select id="start_h"></select>
+                    <div class="time-sep">:</div>
+                    <select id="start_m"></select>
+                </div>
+                <input type="hidden" name="start_time" id="start_time">
             </div>
             <div>
-                <label for="end_time">終了時刻</label>
-                <input type="time" name="end_time" id="end_time" step="300" required>
+                <label>終了時刻</label>
+                <div class="time-picker">
+                    <select id="end_h"></select>
+                    <div class="time-sep">:</div>
+                    <select id="end_m"></select>
+                </div>
+                <input type="hidden" name="end_time" id="end_time">
             </div>
         </div>
 
@@ -35,7 +58,7 @@
         </label>
 
         <div class="overnight-hint" id="overnight-hint">
-            例：深夜1時30分終了 → 「1:30」と入力してください
+            例：深夜1時30分終了 → 終了時刻を「1時30分」に設定してください
         </div>
 
         <button type="submit" class="btn btn-primary">送信する</button>
@@ -54,21 +77,63 @@
 </div>
 
 <script>
+    // 日付デフォルト
     const today = new Date();
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const dd = String(today.getDate()).padStart(2, '0');
-    document.getElementById('shift_date').value = `${yyyy}-${mm}-${dd}`;
+    document.getElementById('shift_date').value =
+        `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
 
+    // 時・分の選択肢を生成
+    function buildHour(id, defaultH) {
+        const sel = document.getElementById(id);
+        for (let h = 0; h <= 23; h++) {
+            const o = document.createElement('option');
+            o.value = String(h).padStart(2,'0');
+            o.textContent = String(h).padStart(2,'0') + '時';
+            if (h === defaultH) o.selected = true;
+            sel.appendChild(o);
+        }
+    }
+
+    function buildMin(id) {
+        const sel = document.getElementById(id);
+        for (let m = 0; m < 60; m += 5) {
+            const o = document.createElement('option');
+            o.value = String(m).padStart(2,'0');
+            o.textContent = String(m).padStart(2,'0') + '分';
+            sel.appendChild(o);
+        }
+    }
+
+    buildHour('start_h', 17);
+    buildMin('start_m');
+    buildHour('end_h', 22);
+    buildMin('end_m');
+
+    // hidden inputに値をセット
+    function syncTime() {
+        document.getElementById('start_time').value =
+            document.getElementById('start_h').value + ':' + document.getElementById('start_m').value;
+        document.getElementById('end_time').value =
+            document.getElementById('end_h').value + ':' + document.getElementById('end_m').value;
+    }
+
+    ['start_h','start_m','end_h','end_m'].forEach(id => {
+        document.getElementById(id).addEventListener('change', syncTime);
+    });
+    syncTime(); // 初期値セット
+
+    // 翌日ヒント
     document.getElementById('is_overnight').addEventListener('change', function() {
         document.getElementById('overnight-hint').style.display = this.checked ? 'block' : 'none';
     });
 
+    // 送信バリデーション
     document.getElementById('shiftForm').addEventListener('submit', function(e) {
+        syncTime();
         const start = document.getElementById('start_time').value;
-        const end = document.getElementById('end_time').value;
+        const end   = document.getElementById('end_time').value;
         const overnight = document.getElementById('is_overnight').checked;
-        if (start && end && !overnight) {
+        if (!overnight) {
             const [sh, sm] = start.split(':').map(Number);
             const [eh, em] = end.split(':').map(Number);
             if (eh * 60 + em <= sh * 60 + sm) {
